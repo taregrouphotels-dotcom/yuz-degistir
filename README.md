@@ -6,7 +6,7 @@ telefon tarayıcısında çalışan web uygulaması. Kapsam ve başarı kriterle
 
 ## Telefondan yayına alma (bilgisayar gerekmez)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/taregrouphotels-dotcom/elisagidaanime/tree/ccr-b2f4d2de-te8ujb)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/taregrouphotels-dotcom/yuz-degistir)
 
 1. Düğmeye dokun, **GitHub ile** Render'a giriş yap; Render GitHub'a erişim isterse bu depoya izin ver.
 2. Açılan formda iki alanı doldur: `INVITE_CODES` (arkadaşlara vereceğin kod) ve `PRUNA_API_KEY`.
