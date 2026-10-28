@@ -57,7 +57,8 @@ function requireInvite(req, _res, next) {
   next();
 }
 
-app.get('/healthz', (_req, res) => res.send('ok'));
+// Render, yayındaki commit'i RENDER_GIT_COMMIT ile verir; hangi sürümün çalıştığı buradan görülür.
+app.get('/healthz', (_req, res) => res.send(`ok ${(process.env.RENDER_GIT_COMMIT || 'yerel').slice(0, 7)}`));
 
 app.post('/api/login', requireInvite, (_req, res) => res.json({ ok: true }));
 
