@@ -11,7 +11,7 @@ export const config = {
   inviteCodes: list(process.env.INVITE_CODES),
   provider: process.env.PROVIDER || 'pruna',
   dataDir: path.resolve(ROOT, process.env.DATA_DIR || 'data'),
-  maxConcurrentJobs: Number(process.env.MAX_CONCURRENT_JOBS || 2),
+  maxConcurrentJobs: Number(process.env.MAX_CONCURRENT_JOBS || 1),
   retentionHours: Number(process.env.RETENTION_HOURS || 24),
 
   // Spesifikasyon: 5–10 sn. Telefon kayıtlarındaki küçük sapmalar için hafif tolerans.

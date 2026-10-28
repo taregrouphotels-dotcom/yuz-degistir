@@ -10,6 +10,9 @@ services:
         value: pruna
       - key: PRUNA_RESOLUTION
         value: 720p
+      # 512 MB bellekte aynı anda tek video işlenir; diğerleri sıraya girer.
+      - key: MAX_CONCURRENT_JOBS
+        value: "1"
       - key: INVITE_CODES
         sync: false
       - key: PRUNA_API_KEY
