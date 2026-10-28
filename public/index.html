@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Yüz Değiştir</title>
+  <meta name="theme-color" content="#14121a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Yüz Değiştir">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main id="app">
+    <!-- 0. Davet kodu -->
+    <section id="screen-invite" class="screen">
+      <div class="hero">
+        <h1>Yüz Değiştir</h1>
+        <p class="muted">Arkadaş grubuna özel demo. Devam etmek için davet kodunu gir.</p>
+      </div>
+      <form id="invite-form" class="stack">
+        <input id="invite-code" type="text" autocomplete="off" autocapitalize="none" placeholder="Davet kodu" required>
+        <button class="primary" type="submit">Giriş</button>
+        <p id="invite-error" class="error" hidden></p>
+      </form>
+    </section>
+
+    <!-- 1. Karakter seçimi -->
+    <section id="screen-characters" class="screen" hidden>
+      <header class="bar"><h2>1 · Karakter seç</h2></header>
+      <div id="character-grid" class="grid"></div>
+      <button id="custom-person" class="card custom" type="button">
+        <span class="plus">+</span>
+        <span><strong>Kendi fotoğrafların</strong><br><small class="muted">1–4 fotoğraf yükle</small></span>
+      </button>
+      <details id="provider-box" class="provider" hidden>
+        <summary>Servis: <span id="provider-label"></span></summary>
+        <div id="provider-options" class="stack"></div>
+      </details>
+    </section>
+
+    <!-- 1b. Kişi fotoğrafları -->
+    <section id="screen-photos" class="screen" hidden>
+      <header class="bar"><button class="back" data-back="characters" type="button">‹</button><h2>Kişi fotoğrafları</h2></header>
+      <p class="muted">Aynı kişinin 1–4 net, önden çekilmiş fotoğrafını seç. Her fotoğrafta tek yüz olmalı.</p>
+      <label class="button">Fotoğraf seç<input id="photo-input" type="file" accept="image/*" multiple hidden></label>
+      <div id="photo-previews" class="thumbs"></div>
+      <p id="photo-error" class="error" hidden></p>
+      <label class="check">
+        <input id="consent" type="checkbox">
+        <span>Fotoğraftaki kişi benim ya da bu kişi fotoğraflarının bu amaçla kullanılmasına açıkça izin verdi.</span>
+      </label>
+      <button id="photos-next" class="primary" type="button" disabled>Devam</button>
+    </section>
+
+    <!-- 2. Çekim kuralları ve video -->
+    <section id="screen-video" class="screen" hidden>
+      <header class="bar"><button class="back" data-back="characters" type="button">‹</button><h2>2 · Video</h2></header>
+      <div id="selected-target" class="selected"></div>
+      <ul class="rules">
+        <li><b>📱</b> Telefon dik, yüz ve omuzlar kadrajda, kameraya doğrudan bak.</li>
+        <li><b>💡</b> Yüzü önden alan düzgün ışık; arkada pencere ya da güçlü ışık olmasın.</li>
+        <li><b>👤</b> Karede tek kişi olsun.</li>
+        <li><b>✋</b> Eller yüzü kapatmasın; normal el hareketi serbest.</li>
+        <li><b>⏱</b> 5–10 saniye, sabit kamera (tripod ya da masaya dayalı).</li>
+      </ul>
+      <div class="stack">
+        <label class="button primary">Video çek<input id="video-camera" type="file" accept="video/*" capture="user" hidden></label>
+        <label class="button">Galeriden seç<input id="video-gallery" type="file" accept="video/*" hidden></label>
+      </div>
+    </section>
+
+    <!-- 3. Kontrol -->
+    <section id="screen-check" class="screen" hidden>
+      <header class="bar"><button class="back" data-back="video" type="button">‹</button><h2>3 · Kontrol</h2></header>
+      <video id="preview" class="player" playsinline muted controls></video>
+      <ul id="checks" class="checks"></ul>
+      <p id="check-error" class="error" hidden></p>
+      <button id="start" class="primary" type="button" disabled>Dönüştür</button>
+    </section>
+
+    <!-- 4. İşleniyor -->
+    <section id="screen-progress" class="screen" hidden>
+      <header class="bar"><h2>4 · Dönüştürülüyor</h2></header>
+      <div class="progress-ring"><span id="elapsed">0</span><small>sn</small></div>
+      <ol id="steps" class="steps">
+        <li data-step="upload">Video gönderiliyor</li>
+        <li data-step="preparing">Video hazırlanıyor</li>
+        <li data-step="generating">Yapay zekâ karakteri oynatıyor</li>
+        <li data-step="finishing">Ses ve işaret ekleniyor</li>
+      </ol>
+      <div class="bar-track"><div id="upload-bar" class="bar-fill"></div></div>
+      <p id="progress-note" class="muted center">Yaklaşık 1 dakika sürer. Bu sayfayı kapatma.</p>
+      <p id="progress-error" class="error" hidden></p>
+      <button id="retry" class="primary" type="button" hidden>Baştan dene</button>
+    </section>
+
+    <!-- 5. Sonuç -->
+    <section id="screen-result" class="screen" hidden>
+      <header class="bar"><h2>5 · Sonuç</h2></header>
+      <video id="result" class="player" playsinline controls autoplay loop></video>
+      <p id="result-meta" class="muted center"></p>
+      <div class="stack">
+        <button id="share" class="primary" type="button">Paylaş (WhatsApp / Instagram)</button>
+        <a id="download" class="button" download>İndir</a>
+        <button id="again" type="button">Yeni video</button>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
