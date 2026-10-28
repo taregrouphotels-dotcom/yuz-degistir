@@ -23,7 +23,7 @@ const STYLE =
   'Photorealistic candid portrait photograph of {who}. Chest-up framing, centered, facing the camera directly, ' +
   'looking straight into the lens, mouth closed, relaxed natural expression. Soft even frontal lighting, no harsh shadows, ' +
   'plain light grey studio background, sharp focus on the face, natural skin texture with pores, shot on a 50mm lens, ' +
-  'realistic color. Only one person in the frame, no hands visible, no text, no watermark.';
+  'realistic color. Fully clothed. Only one person in the frame, no hands visible, no text, no watermark.';
 
 const all = JSON.parse(await fs.readFile(config.charactersFile, 'utf8'));
 const wanted = args.characters === 'all' ? null : new Set(args.characters.split(','));

@@ -114,7 +114,11 @@ async function runJob(job) {
   job.status = 'finishing';
   const result = path.join(job.dir, 'result.mp4');
   await timed(job, 'finish', () => finalizeVideo({ generated, original: normalized, output: result }));
-  job.resultUrl = await publishResult(job.id, result);
+  // Depolama hatası işi düşürmez; sonuç sunucunun diskinden verilir.
+  job.resultUrl = await publishResult(job.id, result).catch((err) => {
+    console.error(`[iş ${job.id}] sonuç depolamaya yüklenemedi, yerelden verilecek:`, err.message);
+    return null;
+  });
   job.resultSeconds = (await probe(result)).duration;
   job.status = 'done';
   job.timings.total = Number(((Date.now() - job.createdAt) / 1000).toFixed(1));
