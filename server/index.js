@@ -57,6 +57,8 @@ function requireInvite(req, _res, next) {
   next();
 }
 
+app.get('/healthz', (_req, res) => res.send('ok'));
+
 app.post('/api/login', requireInvite, (_req, res) => res.json({ ok: true }));
 
 app.get('/api/config', requireInvite, (_req, res) => {

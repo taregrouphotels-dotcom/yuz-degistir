@@ -6,6 +6,35 @@ import { download, requestJson, sleep, uploadFile } from './http.js';
 
 const API = 'https://api.pruna.ai/v1';
 
+const auth = () => ({ apikey: config.pruna.apiKey });
+
+// Pruna'da bir iş başlatır ve bitene kadar bekler; generation_url içeren son durumu döndürür.
+export async function predict(model, input, signal) {
+  const created = await requestJson(
+    `${API}/predictions`,
+    {
+      method: 'POST',
+      headers: { ...auth(), Model: model, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input }),
+      signal,
+    },
+    'Pruna iş oluşturma',
+  );
+
+  let state = created;
+  const pollUrl = created.get_url || `${API}/predictions/status/${created.id}`;
+  while (state.status !== 'succeeded') {
+    if (state.status === 'failed') {
+      throw new Error(`Pruna işi başarısız: ${state.error || state.message || 'bilinmeyen hata'}`);
+    }
+    await sleep(2000, signal);
+    state = await requestJson(pollUrl, { headers: auth(), signal }, 'Pruna durum sorgusu');
+  }
+  return state;
+}
+
+export const downloadResult = (url, dest) => download(url, auth(), dest);
+
 export const pruna = {
   name: 'pruna',
   label: 'Pruna P-Video-Replace',
@@ -14,45 +43,20 @@ export const pruna = {
   isConfigured: () => Boolean(config.pruna.apiKey),
 
   async generate({ videoPath, imagePaths, prompt, workDir, onStatus, signal }) {
-    const auth = { apikey: config.pruna.apiKey };
-
     onStatus('uploading');
     const uploads = await Promise.all(
-      [videoPath, ...imagePaths].map((f) => uploadFile(`${API}/files`, auth, f, 'Pruna dosya yükleme')),
+      [videoPath, ...imagePaths].map((f) => uploadFile(`${API}/files`, auth(), f, 'Pruna dosya yükleme')),
     );
     const [video, ...images] = uploads.map((u) => u.urls?.get);
 
     onStatus('generating');
-    const created = await requestJson(
-      `${API}/predictions`,
-      {
-        method: 'POST',
-        headers: { ...auth, Model: 'p-video-replace', 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input: {
-            video,
-            images,
-            instruction_prompt: prompt,
-            resolution: config.pruna.resolution,
-            save_audio: true,
-          },
-        }),
-        signal,
-      },
-      'Pruna iş oluşturma',
+    const state = await predict(
+      'p-video-replace',
+      { video, images, instruction_prompt: prompt, resolution: config.pruna.resolution, save_audio: true },
+      signal,
     );
 
-    let state = created;
-    const pollUrl = created.get_url || `${API}/predictions/status/${created.id}`;
-    while (state.status !== 'succeeded') {
-      if (state.status === 'failed') {
-        throw new Error(`Pruna işi başarısız: ${state.error || state.message || 'bilinmeyen hata'}`);
-      }
-      await sleep(2000, signal);
-      state = await requestJson(pollUrl, { headers: auth, signal }, 'Pruna durum sorgusu');
-    }
-
     onStatus('downloading');
-    return download(state.generation_url, auth, path.join(workDir, 'generated.mp4'));
+    return downloadResult(state.generation_url, path.join(workDir, 'generated.mp4'));
   },
 };

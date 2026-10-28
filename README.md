@@ -4,6 +4,18 @@ Kullanıcının çektiği 5–10 saniyelik videoyu seçilen karaktere yaklaşık
 telefon tarayıcısında çalışan web uygulaması. Kapsam ve başarı kriterleri için
 "Yüz Değiştirme Uygulaması — İlk Demo Tanımı" belgesine bakın.
 
+## Telefondan yayına alma (bilgisayar gerekmez)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/taregrouphotels-dotcom/elisagidaanime/tree/ccr-b2f4d2de-te8ujb)
+
+1. Düğmeye dokun, **GitHub ile** Render'a giriş yap; Render GitHub'a erişim isterse bu depoya izin ver.
+2. Açılan formda iki alanı doldur: `INVITE_CODES` (arkadaşlara vereceğin kod) ve `PRUNA_API_KEY`.
+   `REPLICATE_API_TOKEN` boş kalabilir.
+3. **Deploy**'a bas. Birkaç dakika sonra `https://yuz-degistir-xxxx.onrender.com` adresi çalışır.
+
+Ücretsiz planda sunucu 15 dakika kullanılmazsa uyur; ilk açılış ~1 dakika sürer ve
+saklanan sonuçlar silinir. Sürekli açık kalması için Render'da planı **Starter**'a yükseltmek yeterli.
+
 ## Akış
 
 1. Davet kodu ile giriş (uygulama herkese açık değil).
@@ -47,6 +59,15 @@ Servisin kendi güvenlik filtresi kapatılmaz.
 `characters/characters.json` 10 test profilini (demo tanımındaki tablo) içerir. Portreler
 `public/characters/` altına JSON'daki dosya adlarıyla konur; portresi olmayan karakter uygulamada
 "portre bekleniyor" görünür. Portre kuralları: `public/characters/README.md`.
+
+## Portre üretimi
+
+```bash
+npm run portraits -- --variants 3
+```
+
+Her karakter için Pruna p-image ile 3 aday üretir (`reports/portraits/`, görsel başına ~0,005 $).
+Seçilen aday `public/characters/` altına JSON'daki adla kopyalanır.
 
 ## İki servisin karşılaştırılması
 

@@ -1,0 +1,18 @@
+# Render Blueprint — "Deploy to Render" düğmesi bu dosyayı kullanır.
+services:
+  - type: web
+    name: yuz-degistir
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: PROVIDER
+        value: pruna
+      - key: PRUNA_RESOLUTION
+        value: 720p
+      - key: INVITE_CODES
+        sync: false
+      - key: PRUNA_API_KEY
+        sync: false
+      - key: REPLICATE_API_TOKEN
+        sync: false
