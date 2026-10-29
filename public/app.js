@@ -2,6 +2,7 @@ import { facesInImage, facesInVideo } from './face-check.js';
 
 const $ = (sel) => document.querySelector(sel);
 const STORAGE_KEY = 'yuz-degistir-davet';
+const JOB_KEY = 'yuz-degistir-is';
 
 const state = {
   invite: safeGet(STORAGE_KEY) || '',
@@ -269,7 +270,7 @@ async function checkVideo(file) {
 
 // ---------- 4. İşleme ----------
 $('#start').addEventListener('click', startJob);
-$('#retry').addEventListener('click', () => show('video'));
+$('#retry').addEventListener('click', () => show(state.target ? 'video' : 'characters'));
 
 const STEP_ORDER = ['upload', 'preparing', 'generating', 'finishing'];
 const STATUS_TO_STEP = {
@@ -286,10 +287,10 @@ function setStep(step) {
 }
 
 let timer;
-function startTimer() {
-  const t0 = Date.now();
+function startTimer(offsetSeconds = 0) {
+  const t0 = Date.now() - offsetSeconds * 1000;
   clearInterval(timer);
-  $('#elapsed').textContent = '0';
+  $('#elapsed').textContent = String(offsetSeconds);
   timer = setInterval(() => ($('#elapsed').textContent = Math.floor((Date.now() - t0) / 1000)), 250);
 }
 
@@ -306,7 +307,7 @@ function upload(form) {
       try { body = JSON.parse(xhr.responseText); } catch {}
       xhr.status < 300 ? resolve(body) : reject(new Error(body.error || `Hata (${xhr.status})`));
     };
-    xhr.onerror = () => reject(new Error('Bağlantı hatası. İnternetini kontrol et.'));
+    xhr.onerror = () => reject(new Error('Video gönderilemedi. İnternetini kontrol edip tekrar dene; gönderim bitene kadar uygulamada kal.'));
     xhr.send(form);
   });
 }
@@ -331,7 +332,10 @@ async function startJob() {
   startTimer();
 
   try {
+    const uploadStart = Date.now();
     state.job = await upload(form);
+    state.uploadSeconds = Math.round((Date.now() - uploadStart) / 1000);
+    safeSet(JOB_KEY, state.job.id);
     $('#upload-bar').parentElement.hidden = true;
     await poll(state.job.id);
   } catch (err) {
@@ -344,27 +348,81 @@ async function startJob() {
   }
 }
 
+// Sekme arka plana alınınca ya da bağlantı bir an koptuğunda istekler düşebilir; iş sunucuda
+// sürmeye devam ettiği için birkaç dakika boyunca tekrar denenir.
+const RETRY_FOR_MS = 3 * 60 * 1000;
+let wakePoll = () => {};
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && wakePoll());
+
 async function poll(id) {
+  let failingSince = null;
   for (;;) {
-    const job = await api(`/api/jobs/${id}`);
-    if (job.status === 'failed') throw new Error(`Dönüştürme başarısız: ${job.error}`);
+    let job;
+    try {
+      job = await api(`/api/jobs/${id}`);
+      failingSince = null;
+    } catch (err) {
+      if (err.status === 404) {
+        safeSet(JOB_KEY, null);
+        throw new Error('Sunucu yeniden başladığı için iş kayboldu. Lütfen tekrar dene.');
+      }
+      failingSince ??= Date.now();
+      if (Date.now() - failingSince > RETRY_FOR_MS) throw new Error('Sunucuya ulaşılamıyor. İnternetini kontrol edip tekrar dene.');
+      $('#progress-note').textContent = 'Bağlantı koptu, tekrar deneniyor…';
+      await new Promise((r) => { wakePoll = r; setTimeout(r, 3000); });
+      continue;
+    }
+    if (job.status === 'failed') {
+      safeSet(JOB_KEY, null);
+      throw new Error(`Dönüştürme başarısız: ${job.error}`);
+    }
     if (job.status === 'done') return showResult(job);
     setStep(STATUS_TO_STEP[job.status] || 'generating');
     if (job.queuePosition > 0) $('#progress-note').textContent = `Sırada ${job.queuePosition}. sıradasın…`;
-    else $('#progress-note').textContent = 'Yaklaşık 1 dakika sürer. Bu sayfayı kapatma.';
-    await new Promise((r) => setTimeout(r, 1500));
+    else $('#progress-note').textContent = 'İş sunucuda sürüyor; başka uygulamaya geçebilirsin, dönünce kaldığı yerden devam eder.';
+    await new Promise((r) => { wakePoll = r; setTimeout(r, 1500); });
+  }
+}
+
+async function resumeJob(id) {
+  state.uploadSeconds = null;
+  show('progress');
+  setError($('#progress-error'), '');
+  $('#retry').hidden = true;
+  $('#progress-note').hidden = false;
+  $('#upload-bar').parentElement.hidden = true;
+  setStep('preparing');
+  try {
+    const job = await api(`/api/jobs/${id}`).catch(() => null);
+    startTimer(job?.elapsedSeconds || 0);
+    await poll(id);
+  } catch (err) {
+    clearInterval(timer);
+    $('#progress-note').hidden = true;
+    setError($('#progress-error'), err.message);
+    $('#retry').hidden = false;
+  } finally {
+    $('#upload-bar').parentElement.hidden = false;
   }
 }
 
 // ---------- 5. Sonuç ----------
 function showResult(job) {
   clearInterval(timer);
+  safeSet(JOB_KEY, null);
   state.job = job;
   const video = $('#result');
   video.src = job.resultUrl;
   const dl = job.resultUrl.startsWith('/') ? `${job.resultUrl}?download=1` : job.resultUrl;
   $('#download').href = dl;
-  $('#result-meta').textContent = `${job.elapsedSeconds} saniyede hazırlandı`;
+  const t = job.timings || {};
+  const parts = [
+    state.uploadSeconds != null && `gönderim ${state.uploadSeconds} sn`,
+    t.prepare != null && `hazırlık ${t.prepare} sn`,
+    t.provider != null && `yapay zekâ ${t.provider} sn`,
+    t.finish != null && `son işlem ${t.finish} sn`,
+  ].filter(Boolean);
+  $('#result-meta').textContent = `${job.elapsedSeconds} saniyede hazırlandı${parts.length ? ` (${parts.join(' · ')})` : ''}`;
   $('#share').hidden = !navigator.canShare;
   show('result');
 }
@@ -384,11 +442,16 @@ $('#again').addEventListener('click', () => show('characters'));
 
 // ---------- Başlangıç ----------
 if (state.invite) {
-  boot().catch((err) => {
-    if (err.status === 401) safeSet(STORAGE_KEY, null);
-    $('#invite-code').value = state.invite;
-    show('invite');
-  });
+  boot()
+    .then(() => {
+      const pending = safeGet(JOB_KEY);
+      if (pending) resumeJob(pending);
+    })
+    .catch((err) => {
+      if (err.status === 401) safeSet(STORAGE_KEY, null);
+      $('#invite-code').value = state.invite;
+      show('invite');
+    });
 } else {
   show('invite');
 }
